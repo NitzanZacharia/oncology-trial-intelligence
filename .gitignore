@@ -1,0 +1,14 @@
+# Python virtual environment
+.venv/
+
+# Python bytecode / cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS cruft
+.DS_Store
+
+# Claude Code personal/local config (not project-wide settings)
+.claude/settings.local.json
+CLAUDE.local.md
