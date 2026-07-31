@@ -366,8 +366,13 @@ def run_all_checks(
     locations_df: pd.DataFrame,
     raw_row_count: int,
     duplicate_studies_merged: int,
-) -> dict:
-    """Run every check above in order, assemble the full quality_report.json dict — LLD §1.5."""
+) -> tuple[dict, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Run every check above in order, assemble the full quality_report.json dict, and
+    return it alongside the cleaned (studies_df, interventions_df, locations_df) —
+    referential-integrity orphans dropped, enrollment out-of-range values nulled, ages
+    parsed to float — LLD §1.5. The report and the returned tables must describe the
+    same data: callers write these returned DataFrames to /data/processed, not the ones
+    passed in, so quality_report.json never claims a fix that isn't actually on disk."""
     checks: list[CheckResult] = []
 
     checks.append(check_nct_id_format(studies_df))
@@ -404,7 +409,7 @@ def run_all_checks(
         },
         "checks": [asdict(c) for c in checks],
     }
-    return report
+    return report, studies_df, interventions_df, locations_df
 
 
 def write_quality_report(report: dict, path: Path) -> None:
