@@ -11,6 +11,7 @@ import re
 import pandas as pd
 
 from src.extract import CANCER_TYPE_SHORTLIST
+from src.storage import _cast_child_dtypes, _cast_studies_dtypes
 from src.synonyms import expand_text
 
 _NCT_ID_RE = re.compile(r"^NCT\d{8}$")
@@ -32,14 +33,6 @@ _AGE_UNIT_DIVISORS = {
 }
 
 _REQUIRED_STUDY_COLS = ["nct_id", "brief_title", "overall_status", "conditions"]
-
-_STUDIES_STRING_COLS = [
-    "nct_id", "brief_title", "official_title",
-    "start_date", "primary_completion_date", "study_first_post_date", "last_update_post_date",
-    "sponsor_name", "conditions", "keywords", "shortlist_conditions",
-    "phases", "eligibility_criteria", "composite_text",
-]
-_STUDIES_CATEGORY_COLS = ["overall_status", "sponsor_class", "study_type", "enrollment_type", "sex"]
 
 _INTERVENTIONS_KEY_COLS = ["nct_id", "intervention_type", "intervention_name"]
 _LOCATIONS_KEY_COLS = ["nct_id", "facility", "city", "state", "country"]
@@ -205,37 +198,6 @@ def dedupe_child_rows(rows: list[dict], key_columns: list[str]) -> pd.DataFrame:
         return pd.DataFrame(columns=key_columns)
     df = pd.DataFrame(rows, columns=key_columns)
     return df.drop_duplicates(subset=key_columns, keep="first").reset_index(drop=True)
-
-
-def _cast_studies_dtypes(df: pd.DataFrame) -> pd.DataFrame:
-    """Apply LLD §1.1 dtypes. minimum_age_years/maximum_age_years are deliberately left
-    untouched here (still raw strings pre-validation) — see flatten_study's note."""
-    if df.empty:
-        return df
-    df = df.copy()
-    for col in _STUDIES_STRING_COLS:
-        if col in df.columns:
-            df[col] = df[col].where(df[col].notna(), None).astype(object)
-    for col in _STUDIES_CATEGORY_COLS:
-        if col in df.columns:
-            df[col] = df[col].astype("category")
-    if "enrollment_count" in df.columns:
-        df["enrollment_count"] = pd.to_numeric(df["enrollment_count"], errors="coerce").astype("Int64")
-    if "healthy_volunteers" in df.columns:
-        df["healthy_volunteers"] = df["healthy_volunteers"].astype("boolean")
-    return df
-
-
-def _cast_child_dtypes(df: pd.DataFrame, category_cols: list[str]) -> pd.DataFrame:
-    if df.empty:
-        return df
-    df = df.copy()
-    for col in df.columns:
-        if col in category_cols:
-            df[col] = df[col].astype("category")
-        else:
-            df[col] = df[col].where(df[col].notna(), None).astype(object)
-    return df
 
 
 def transform_all(

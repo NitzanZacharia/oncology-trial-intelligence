@@ -6,6 +6,7 @@ under /data/raw — the resume mechanism described in HLD §1.
 """
 
 import json
+import os
 import time
 from pathlib import Path
 from typing import Iterator
@@ -140,12 +141,21 @@ def paginate_condition(
 
 
 def write_raw_checkpoint(condition: str, studies: list[dict], raw_dir: Path) -> None:
-    """Write the concatenated pages for one condition to /data/raw/<condition>.json."""
+    """Write the concatenated pages for one condition to /data/raw/<condition>.json.
+
+    Written atomically (write to a temp file in the same directory, then os.replace) so
+    that a crash/kill mid-write can never leave a truncated file that `has_checkpoint`
+    would then mistake for a complete, valid checkpoint on the next resume run — the
+    resume mechanism (HLD §1) relies on file *existence* alone as the "done" signal, so a
+    partially-written file must never be observable at its final path.
+    """
     raw_dir = Path(raw_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
     path = raw_checkpoint_path(condition, raw_dir)
-    with open(path, "w", encoding="utf-8") as f:
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(studies, f, indent=2)
+    os.replace(tmp_path, path)
 
 
 def load_raw_checkpoint(condition: str, raw_dir: Path) -> list[dict]:

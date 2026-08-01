@@ -26,8 +26,6 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
-from src.transform import _cast_child_dtypes, _cast_studies_dtypes
-
 _STUDIES_FILENAME = "studies.csv"
 _INTERVENTIONS_FILENAME = "interventions.csv"
 _LOCATIONS_FILENAME = "locations.csv"
@@ -44,6 +42,53 @@ _STUDIES_FLOAT_COLS = ["minimum_age_years", "maximum_age_years"]
 
 _INTERVENTIONS_CATEGORY_COLS = ["intervention_type"]
 _LOCATIONS_CATEGORY_COLS: list[str] = []
+
+# Shared dtype-casting helpers (LLD §1.1). These live here — rather than in
+# src/transform.py, which imports src/extract.py for CANCER_TYPE_SHORTLIST — so that
+# storage.py has no src.* dependencies at all. That matters for HLD §1's one-way-arrow
+# constraint: app.py imports src.storage (this module) directly, so if storage.py ever
+# imported from src.transform, app.py would transitively import src.transform ->
+# src.extract, violating "app.py must never import src.extract" even though no network
+# call would actually fire at import time. src.transform imports these two functions
+# from here instead, so the dependency runs storage <- transform, not the other way.
+_STUDIES_STRING_COLS = [
+    "nct_id", "brief_title", "official_title",
+    "start_date", "primary_completion_date", "study_first_post_date", "last_update_post_date",
+    "sponsor_name", "conditions", "keywords", "shortlist_conditions",
+    "phases", "eligibility_criteria", "composite_text",
+]
+_STUDIES_CATEGORY_COLS = ["overall_status", "sponsor_class", "study_type", "enrollment_type", "sex"]
+
+
+def _cast_studies_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply LLD §1.1 dtypes. minimum_age_years/maximum_age_years are deliberately left
+    untouched here (still raw strings pre-validation) — see transform.flatten_study's note."""
+    if df.empty:
+        return df
+    df = df.copy()
+    for col in _STUDIES_STRING_COLS:
+        if col in df.columns:
+            df[col] = df[col].where(df[col].notna(), None).astype(object)
+    for col in _STUDIES_CATEGORY_COLS:
+        if col in df.columns:
+            df[col] = df[col].astype("category")
+    if "enrollment_count" in df.columns:
+        df["enrollment_count"] = pd.to_numeric(df["enrollment_count"], errors="coerce").astype("Int64")
+    if "healthy_volunteers" in df.columns:
+        df["healthy_volunteers"] = df["healthy_volunteers"].astype("boolean")
+    return df
+
+
+def _cast_child_dtypes(df: pd.DataFrame, category_cols: list[str]) -> pd.DataFrame:
+    if df.empty:
+        return df
+    df = df.copy()
+    for col in df.columns:
+        if col in category_cols:
+            df[col] = df[col].astype("category")
+        else:
+            df[col] = df[col].where(df[col].notna(), None).astype(object)
+    return df
 
 
 def write_tables(
