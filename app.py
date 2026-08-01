@@ -192,7 +192,20 @@ def render_trial_landscape(studies_df: pd.DataFrame) -> None:
     years = pd.to_datetime(subset["study_first_post_date"], errors="coerce").dt.year
     year_counts = years.dropna().astype(int).value_counts().sort_index()
     if not year_counts.empty:
-        st.line_chart(year_counts)
+        # st.line_chart delegates to Vega-Lite's default quantitative-axis formatting,
+        # which renders year labels with thousands-separator commas (e.g. "2,019").
+        # An explicit Altair chart with axis format="d" forces plain integer labels.
+        year_df = year_counts.reset_index()
+        year_df.columns = ["year", "count"]
+        year_chart = (
+            alt.Chart(year_df)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("year:Q", axis=alt.Axis(format="d"), title="Year"),
+                y=alt.Y("count:Q", scale=alt.Scale(domainMin=0), title="Studies posted"),
+            )
+        )
+        st.altair_chart(year_chart)
         latest_year = int(year_counts.index.max())
         st.caption(
             f"{latest_year} is partial (year-to-date), not a full year — the recent dip "
