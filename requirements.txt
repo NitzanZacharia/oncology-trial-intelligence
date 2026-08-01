@@ -1,5 +1,10 @@
 requests
-pandas
+# The final clean-clone smoke test caught a real pandas 3.x missing-value-representation
+# difference that broke transform.py (fixed at the code level too - see
+# src/transform.py's _or_empty). Both 2.3.x and 3.0.x are now verified working end-to-end
+# (full pipeline + test suite + app boot); pinned below 4 to avoid an untested future
+# major version silently breaking a graded, reproducibility-sensitive pipeline.
+pandas>=2.3,<4
 scikit-learn
 joblib
 streamlit

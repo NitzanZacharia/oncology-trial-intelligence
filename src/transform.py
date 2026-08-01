@@ -141,12 +141,24 @@ def parse_age_to_years(age_str: str | None) -> float | None:
     return value / divisor
 
 
+def _or_empty(value) -> str:
+    """Coerce a missing value to "", tolerating both `None` and a float `NaN` — a study
+    row can carry either depending on how pandas represented the missing cell (varies by
+    pandas version/dtype-inference path; `value or ""` alone breaks on NaN, since NaN is
+    truthy in Python)."""
+    if value is None:
+        return ""
+    if isinstance(value, float) and pd.isna(value):
+        return ""
+    return str(value)
+
+
 def build_composite_text(study_row: dict, synonym_table: dict[str, list[str]]) -> str:
     """Build the synonym-expanded composite_text field for one study row — LLD §1.4."""
-    brief_title = study_row.get("brief_title") or ""
-    conditions = (study_row.get("conditions") or "").replace(";", " ")
-    keywords = (study_row.get("keywords") or "").replace(";", " ")
-    eligibility_criteria = study_row.get("eligibility_criteria") or ""
+    brief_title = _or_empty(study_row.get("brief_title"))
+    conditions = _or_empty(study_row.get("conditions")).replace(";", " ")
+    keywords = _or_empty(study_row.get("keywords")).replace(";", " ")
+    eligibility_criteria = _or_empty(study_row.get("eligibility_criteria"))
 
     text = " ".join([brief_title, conditions, keywords, eligibility_criteria])
     return expand_text(text, synonym_table)
