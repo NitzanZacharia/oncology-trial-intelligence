@@ -6,10 +6,9 @@ sex — who needs a ranked, explained shortlist of actively recruiting
 trials from [ClinicalTrials.gov](https://clinicaltrials.gov), not a raw
 keyword search.
 
-Built for a 24-hour take-home assignment. Full design rationale lives in
-`docs/project-plan.md`, `docs/HLD.md`, and `docs/LLD.md`; how it was built
-is in `docs/AUTONOMOUS_RUN_LOG.md` and `/ai_transcript/` (see "AI usage"
-below).
+Full design rationale lives in `docs/project-plan.md`, `docs/HLD.md`, 
+and `docs/LLD.md`; how it was built is in `docs/AUTONOMOUS_RUN_LOG.md`
+and `/ai_transcript/` (see "AI usage" below).
 
 ## Setup
 
