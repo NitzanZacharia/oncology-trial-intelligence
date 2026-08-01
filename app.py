@@ -175,11 +175,26 @@ def render_patient_match(
     feature_names = vectorizer.get_feature_names_out().tolist()
     st.subheader(f"{len(ranked)} matching trials for {condition}")
 
+    export_rows = []
     for row_index, score in ranked:
         trial = studies_df.loc[row_index]
         trial_vector = matrix[row_index]
         matched_terms = matching.explain_match(query_vector, trial_vector, feature_names, top_k=5)
         trial_locations = locations_df[locations_df["nct_id"] == trial["nct_id"]]
+        phase_display = trial["phases"] if pd.notna(trial["phases"]) and trial["phases"] else "—"
+        sponsor_name = trial["sponsor_name"] if pd.notna(trial["sponsor_name"]) else "—"
+        sponsor_class = trial["sponsor_class"] if pd.notna(trial["sponsor_class"]) else "—"
+
+        export_rows.append(
+            {
+                "nct_id": trial["nct_id"],
+                "title": trial["brief_title"],
+                "phase": phase_display,
+                "sponsor": f"{sponsor_name} ({sponsor_class})",
+                "similarity_score": round(score, 3),
+                "matched_terms": ", ".join(matched_terms),
+            }
+        )
 
         with st.container(border=True):
             st.markdown(
@@ -197,10 +212,7 @@ def render_patient_match(
                     "just a text-similarity score."
                 ),
             )
-            phase_display = trial["phases"] if pd.notna(trial["phases"]) and trial["phases"] else "—"
             meta_cols[1].write(f"**Phase:** {phase_display}")
-            sponsor_name = trial["sponsor_name"] if pd.notna(trial["sponsor_name"]) else "—"
-            sponsor_class = trial["sponsor_class"] if pd.notna(trial["sponsor_class"]) else "—"
             meta_cols[2].write(f"**Sponsor:** {sponsor_name} ({sponsor_class})")
             meta_cols[3].write(f"**Locations:** {len(trial_locations)}")
 
@@ -211,6 +223,14 @@ def render_patient_match(
                     "No shared keywords, but this trial still passes the basic "
                     "filters (cancer type, and sex/age if specified)."
                 )
+
+    st.download_button(
+        "Download shortlist as CSV",
+        data=pd.DataFrame(export_rows).to_csv(index=False),
+        file_name=f"trial_matches_{condition}.csv",
+        mime="text/csv",
+        help="Export this ranked shortlist (NCT ID, title, phase, sponsor, match score, matched terms) as a CSV file.",
+    )
 
 
 def render_trial_landscape(studies_df: pd.DataFrame) -> None:
@@ -443,7 +463,7 @@ def render_about() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Oncology Trial Match", layout="wide")
+    st.set_page_config(page_title="Oncology Trial Match", page_icon="🎗️", layout="wide")
 
     if not (PROCESSED_DIR / "studies.csv").exists():
         st.error(
