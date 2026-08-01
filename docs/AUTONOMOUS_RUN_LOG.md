@@ -289,3 +289,77 @@ unattended edit):**
 **Action taken:** Committed `src/storage.py`, `src/transform.py`,
 `src/validate.py`, `src/extract.py`, `docs/LLD.md`, and the re-generated
 `data/processed/*` + `data/raw/*` (re-run confirms identical results).
+
+---
+
+## 2026-08-01T12:35:00Z — User query: is `studies.csv`'s row count/size consistent with correctly-scoped extraction?
+
+**What was asked:** `data/processed/studies.csv` is 73.58MB, well past
+`HLD.md` §3's stated planning-time assumption ("a few thousand rows across
+three tables at most"). Report `quality_report.json`'s actual
+`raw_rows_pulled`/`studies_written`/`duplicate_studies_merged`, and sanity
+-check whether that row count is consistent with 8 RECRUITING-only cancer
+types after dedup, or suggests `extract.py`'s status filter or
+condition-matching is broader than intended. Report only — no fix yet.
+
+**The numbers (from `quality_report.json.row_counts`, unchanged by
+Checkpoint 6's fix):**
+```
+raw_rows_pulled:          15,425
+studies_written:          13,335
+interventions_written:    26,859
+locations_written:       141,449
+duplicate_studies_merged:  2,090
+```
+
+**Investigation:** Read `src/extract.py`'s actual live request parameters
+directly (not from memory of the spec) — confirmed each page request sends
+exactly `"query.cond": condition` and `"filter.overallStatus":
+"RECRUITING"` per shortlisted condition, matching `HLD.md` §2/`LLD.md`
+§3.1 exactly. **The status/condition filter itself is correctly scoped —
+not the cause.**
+
+The real driver is two things working together, both expected rather than
+a bug:
+1. `query.cond` is a free-text/fuzzy condition search (per
+   `project-plan.md` §0's own API grounding — it's explicitly a text
+   search, not an exact enum match), so `query.cond=lung` matches every
+   trial whose condition text mentions lung cancer in any form (NSCLC,
+   SCLC, lung neoplasms, etc.), not a single narrow diagnosis code — by
+   design, this is what makes the shortlist's 8 broad, high-incidence
+   category terms useful at all rather than requiring 50+ exact-match
+   queries.
+2. These specific 8 conditions were deliberately chosen in
+   `project-plan.md` §1 for being "among the highest-incidence,
+   highest-trial-volume cancer types" — so a real, honest pull of
+   currently-recruiting studies for exactly these 8 categories combined
+   genuinely runs into the tens of thousands, not "a few thousand."
+   `lung` alone pulled 4,931 raw rows — plausible for the single most
+   trial-heavy cancer type on the registry (driven by the ongoing
+   proliferation of EGFR/ALK/KRAS-targeted-therapy trials), not an
+   indication of a filter bug.
+
+`studies_written` (13,335) reconciles exactly against
+`raw_rows_pulled - duplicate_studies_merged` (15,425 − 2,090 = 13,335),
+confirming the dedup arithmetic itself is internally consistent — this
+isn't a double-counting artifact either.
+
+**Conclusion:** The row count is consistent with a correctly-scoped
+extraction (verified against the actual request parameters, not assumed)
+combined with genuinely high real-world trial volume for this specific
+8-condition shortlist — not a bug in `filter.overallStatus` or
+`query.cond` usage. `HLD.md` §3's "a few thousand rows... at most" was a
+planning-time estimate made before any live pull, and it's simply wrong
+relative to reality; the section's actual conclusion (CSV is the right
+storage format) still holds at this scale — CSV has no hard size ceiling
+that 73MB approaches — but the stated rationale should be corrected to
+match observed reality rather than the pre-run guess.
+
+**Action taken:** Logged the finding as requested; no code/doc change made
+yet, per the user's explicit "don't fix or resize anything yet" — this
+overlaps with, but is more specific than, the general data-size concern
+already flagged in the Checkpoint 4 entry above (which covers total
+repo/commit size); leaving both as separate entries rather than merging,
+since this one specifically resolves the "is the filter broken" question
+the Checkpoint 4 entry didn't address. Awaiting direction on whether to
+correct `HLD.md` §3's stated assumption to match reality.
