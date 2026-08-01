@@ -6,6 +6,103 @@ final summary is prepended to the top once the run completes, per
 
 ---
 
+## FINAL SUMMARY — 2026-08-01T12:45:00Z
+
+Checkpoints 4-7 of `docs/AUTONOMOUS_RUN_PLAN.md` are complete. Full detail
+for every item below is in its own dated entry further down this log, and
+in `/ai_transcript/` (one file per checkpoint).
+
+**What was completed:**
+- **Checkpoint 4** — `etl.py` implemented and run live against
+  ClinicalTrials.gov's API v2 for all 8 shortlisted conditions: 15,425 raw
+  rows, 2,090 duplicates merged, 13,335 studies / 26,859 interventions /
+  141,449 locations written. `quality_report.json`'s `overall_status` is
+  `fail`, driven by one check (`missing_rate_phases`, ~26% overall,
+  consistent 17-31% across all 8 conditions individually) reflecting a
+  genuine property of the data (phase only applies to drug/biologic
+  trials), not a pipeline defect — confirmed by reading the full report,
+  not just the exit code.
+- **Checkpoint 5** — `app.py` implemented: three tabs (Patient Match,
+  Trial Landscape, Pipeline Health) per `HLD.md`, `LLD.md` §4's caching
+  strategy. One-way-arrow architecture constraint verified mechanically
+  (neither `"extract"` nor `"fit_vectorizer"` appears in `app.py`) and
+  smoke-tested (boots, serves HTTP 200).
+- **Checkpoint 6** — Code review pass over `/src/`, `etl.py`, `app.py`.
+  Found and fixed: a real one-way-arrow violation (`app.py` transitively
+  imported the extraction module through an import chain, with no network
+  call actually firing but violating the documented constraint regardless);
+  a non-atomic checkpoint write that could permanently corrupt the resume
+  mechanism on a mid-write crash; and — the most significant finding — two
+  data-quality checks (`nct_id_format`, `required_field_missing_*`) that
+  could structurally never report a real violation, because the rows they
+  were supposed to flag had already been dropped by an earlier pipeline
+  stage before those checks ever ran. Fixed by making the checks own their
+  own drop (matching the pattern the other three checks already used),
+  re-verified end-to-end.
+- **Checkpoint 7** — 23 unit tests (ranking determinism, every
+  `validate.py` check against known good/bad inputs), `README.md`, and the
+  final clean-clone smoke test. **The smoke test found a real bug**: a
+  fresh, unpinned `pip install` pulled pandas 3.0.5 (vs. 2.3.3 used
+  throughout every earlier checkpoint), and a missing-value handling
+  assumption in `transform.build_composite_text` broke under it. Fixed at
+  the code level (version-agnostic now) and additionally pinned
+  `requirements.txt` to `pandas>=2.3,<4` as defense in depth.
+
+**Final clean-clone smoke test result: PASS.** Run twice — once mid-fix to
+confirm the pandas bug's root cause, once fresh from the fully-fixed
+commit for the official record: `git clone` (local path) → `python -m venv
+.venv` → `.venv\Scripts\python.exe -m pip install -r requirements.txt` →
+`.venv\Scripts\python.exe etl.py` (exit 0, 13,335 studies) →
+`.venv\Scripts\python.exe -m pytest tests/` (23/23 pass) →
+`streamlit run app.py` via a Python-script smoke test (HTTP 200, clean
+shutdown). This is the exact sequence documented in `README.md` and
+required by `CLAUDE.md`.
+
+**Flagged for human review before submission:**
+1. **Repo data size.** `data/raw/` + `data/processed/` together are
+   ~223MB (`studies.csv` alone is 77MB) — committed as-is per the locked
+   `HLD.md` §5 decision ("at least a representative sample," and
+   specifically so a reviewer doesn't need to re-run `etl.py` against the
+   live API), but this is much larger than assumed at planning time. Not
+   pushed to `origin` — everything in this run is committed locally only,
+   since pushing to a shared remote was never explicitly authorized.
+2. **`HLD.md` §3's storage-format rationale says "a few thousand rows
+   across three tables at most."** The real, correctly-scoped pull for
+   these 8 high-incidence conditions is 13,335 studies / 141,449
+   locations — investigated in response to a direct question mid-run
+   (see the dedicated log entry) and confirmed to be genuine trial volume,
+   not a filter bug (`extract.py`'s actual request parameters were read
+   directly and match `filter.overallStatus=RECRUITING` +
+   `query.cond=<condition>` exactly). CSV as a format choice still holds
+   at this scale, but the stated assumption in `HLD.md` §3 is factually
+   wrong and hasn't been corrected yet — left alone per an explicit
+   mid-run instruction not to fix/resize anything until directed.
+3. Two subagents (dispatched for the `etl.py` implementation and the
+   Checkpoint 6 code review) made git commits despite being explicitly
+   told not to run any git commands — both commits' actual content was
+   correct and has been kept, but this is worth knowing about as an agent-
+   instruction-following gap, not something this run could self-correct
+   (see the two dedicated log entries for `f5f44bd` and `01a9bce`).
+4. **`app.py`'s Patient Match form submission path** was verified by
+   static/mechanical checks (architecture-conformance assertion, HTTP 200
+   on initial page load) but not by an actual interactive browser session
+   — worth a human clicking through all three tabs once before final
+   submission.
+5. The `/ai_transcript/` directory is a manually-authored substitute for
+   the plan's originally-specified `/export`-based transcript capture, no
+   tool available during this run could invoke that CLI command — logged
+   as a deviation at the time, `/ai_transcript/README.md` explains the
+   substitution.
+
+**Not flagged as a concern, but worth knowing:** two things a human might
+expect to see logged as problems are not: `overall_status: fail` in the
+committed `quality_report.json`, and the 13,335-row volume being far
+larger than `HLD.md`'s original estimate. Both were investigated in depth
+during the run and are genuine, correct reflections of real data — not
+bugs — see items 4 (Checkpoint 4) and 2 (this list) above.
+
+---
+
 ## 2026-07-31T16:43:38Z — Run start / repo state verification
 
 **What was checked:** Read `docs/AUTONOMOUS_RUN_PLAN.md` in full. Before
@@ -363,3 +460,98 @@ repo/commit size); leaving both as separate entries rather than merging,
 since this one specifically resolves the "is the filter broken" question
 the Checkpoint 4 entry didn't address. Awaiting direction on whether to
 correct `HLD.md` §3's stated assumption to match reality.
+
+---
+
+## 2026-08-01T12:20:00Z — Checkpoint 7: tests, README, final clean-clone smoke test
+
+**What was built:**
+- `tests/test_matching.py` (11 tests) — `rank_candidates` determinism
+  (identical output across 10 repeated calls given identical inputs),
+  descending-score ordering, original-index (not subset-position) return
+  values, `top_n` truncation, empty-candidate handling; `hard_filter`'s
+  status/condition filtering, its no-`reset_index()` index-alignment
+  contract (explicitly asserted with a non-contiguous input index),
+  sex-exclusion-only-when-restrictive, and age-bound filtering;
+  `explain_match`'s highest-weight-term ordering and empty-overlap case.
+- `tests/test_validate.py` (12 tests) — every `check_*` function against
+  known good/bad synthetic inputs, verifying the exact pass/warn/fail
+  thresholds from `LLD.md` §2 (including the boundary cases: 10%
+  triggering warn vs. 80% triggering fail for missing-rate), the
+  now-corrected drop-ownership behavior from Checkpoint 6 (`nct_id_format`/
+  `required_fields` actually dropping and reporting against the real
+  pre-drop total), and an integration-style test asserting
+  `run_all_checks`' returned report and returned tables describe the same
+  (post-drop) data.
+- `README.md` — setup, architecture, data model, known limitations
+  (unstructured eligibility text, fixed 8-condition shortlist, no
+  embeddings/LLM, the `overall_status: fail` explanation, locations-as-
+  list), why `/data` is committed, testing instructions, and AI usage
+  referencing this log and `/ai_transcript/`.
+- Added `pytest` to `requirements.txt`.
+
+**Self-verification — all 23 tests run first against the main dev
+environment:** 23/23 pass (one own test-authoring bug caught and fixed
+along the way: a threshold test used 30%-missing expecting "warn," which
+is actually "fail" per `LLD.md` §2.5's pass<=5%/warn<=20%/fail>20%
+thresholds — the code was right, the test's expectation was wrong;
+corrected to a genuine 10%-missing warn case).
+
+**Final clean-clone smoke test (the plan's "single most important
+self-verification"), run via the rewritten Windows-correct Python-based
+steps:**
+1. `git clone` the local repo into a clean temp directory, `python -m venv
+   .venv`, `.venv\Scripts\python.exe -m pip install -r requirements.txt`
+   — **this surfaced a real bug the main dev environment had been masking
+   the whole run:** a fresh pip install pulled pandas 3.0.5 (vs. 2.3.3
+   already present system-wide, used for every prior checkpoint), and
+   `.venv\Scripts\python.exe etl.py` crashed in `build_composite_text`
+   with `AttributeError: 'float' object has no attribute 'replace'`.
+   Root cause: `value or ""`-style fallbacks for missing text fields
+   assume a missing value is `None`, but pandas 3.x apparently represents
+   this particular column's missing cells as NaN more often than 2.3.3
+   did for this data, and NaN is truthy in Python, so `NaN or ""` returns
+   NaN, not `""`. **Fixed** with a `pd.isna()`-aware `_or_empty()` helper
+   in `src/transform.py`, used for all four composite-text fields.
+   Verified the fix is behavior-preserving: re-ran the full pipeline in
+   the main dev environment (pandas 2.3.3) afterward and got byte-
+   identical output (13,335 studies, same per-check counts). Also pinned
+   `requirements.txt` to `pandas>=2.3,<4` — the code fix alone makes the
+   logic version-agnostic, but pinning avoids an untested future major
+   version silently breaking a graded, reproducibility-sensitive pipeline;
+   both 2.3.3 and 3.0.5 are now empirically verified end-to-end, not just
+   assumed compatible.
+2. Re-ran the full clean-clone sequence fresh from the fixed commit:
+   clone → venv → `pip install -r requirements.txt` (pandas 3.0.5 again,
+   confirming the pin range still permits and exercises it) →
+   `.venv\Scripts\python.exe etl.py` → **exit 0**, identical row counts
+   (13,335 studies / 26,859 interventions / 141,449 locations) →
+   `.venv\Scripts\python.exe -m pytest tests/` → **23/23 pass** →
+   Python-script Streamlit smoke test (`subprocess.Popen` +
+   `urllib.request`, per the rewritten plan) → **HTTP 200**, clean
+   shutdown, no exceptions in output.
+
+**Judgment call:** Found the pandas-version bug via the smoke test
+specifically because it used an *unpinned* `requirements.txt` against a
+genuinely clean venv — exactly the scenario a reviewer's fresh clone would
+hit, and exactly why this step exists in the plan rather than trusting the
+already-verified-many-times-over main dev environment. Treated this as
+worth fixing immediately (not just flagging) since it's a hard cold-start
+failure on the literal required command sequence — `project-plan.md` §3
+risk #7 calls this out by name as the risk this exact test exists to catch.
+
+**Concern for human review:** None outstanding from this checkpoint — the
+one real bug found was fixed and re-verified end-to-end twice. The
+earlier-flagged `HLD.md` §3 "few thousand rows at most" assumption (see
+the row-count investigation entry above) remains uncorrected, awaiting
+direction as previously logged.
+
+**Action taken:** Committed `src/transform.py` (the `_or_empty` fix),
+`requirements.txt` (pandas pin), and the regenerated
+`data/processed/quality_report.json` / `tfidf_vectorizer.joblib` (byte-
+identical row counts, different only in non-deterministic
+serialization/timestamp bytes) as commit `2112cec`. Committed
+`tests/test_matching.py`, `tests/test_validate.py`, `README.md`, and the
+`pytest` requirement as commit `68dfaad` (made just before the smoke test,
+since the tests themselves needed to exist and pass before the smoke test
+could exercise them).

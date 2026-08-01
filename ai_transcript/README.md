@@ -26,8 +26,16 @@ session and from `docs/AUTONOMOUS_RUN_LOG.md`. This deviation is logged in
   user before proceeding, including the two bugs the user caught/directed
   fixes for (the `fetch_condition_page` 429 backoff requirement, and the
   `run_all_checks` return-type bug).
-- `checkpoint-4-etl.md` — the first checkpoint of the unattended autonomous
-  run (`docs/AUTONOMOUS_RUN_PLAN.md`): `etl.py` implementation and its live
-  run against the ClinicalTrials.gov API.
-- Further files are added one per checkpoint (5, 6, 7) as the autonomous
-  run proceeds.
+- `checkpoint-4-etl.md` — `etl.py` implementation and its live run against
+  the ClinicalTrials.gov API (Checkpoint 4 of the unattended autonomous
+  run, `docs/AUTONOMOUS_RUN_PLAN.md`).
+- `checkpoint-5-app.md` — `app.py` implementation (three-screen Streamlit
+  UI) and its architecture-conformance/smoke-test self-verification
+  (Checkpoint 5).
+- `checkpoint-6-review.md` — the code review pass over `/src/`, `etl.py`,
+  `app.py`, including a real bug found and fixed (a data-quality check
+  that could structurally never fail) (Checkpoint 6).
+- `checkpoint-7-tests-readme-smoke-test.md` — unit tests, `README.md`, and
+  the final clean-clone smoke test, which caught a real pandas-3.x
+  compatibility bug the main dev environment had been silently masking
+  (Checkpoint 7, the final checkpoint of the autonomous run).
