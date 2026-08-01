@@ -501,6 +501,8 @@ def main() -> None:
     with tab_about:
         render_about()
 
+    st.caption("Data from ClinicalTrials.gov · [GitHub repo](https://github.com/NitzanZacharia/oncology-trial-intelligence.git)")
+
 
 if __name__ == "__main__":
     main()
