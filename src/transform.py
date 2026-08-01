@@ -14,8 +14,6 @@ from src.extract import CANCER_TYPE_SHORTLIST
 from src.storage import _cast_child_dtypes, _cast_studies_dtypes
 from src.synonyms import expand_text
 
-_NCT_ID_RE = re.compile(r"^NCT\d{8}$")
-
 _AGE_RE = re.compile(
     r"^(\d+(?:\.\d+)?)\s*(Year|Years|Month|Months|Week|Weeks|Day|Days)$",
     re.IGNORECASE,
@@ -31,8 +29,6 @@ _AGE_UNIT_DIVISORS = {
     "day": 365.25,
     "days": 365.25,
 }
-
-_REQUIRED_STUDY_COLS = ["nct_id", "brief_title", "overall_status", "conditions"]
 
 _INTERVENTIONS_KEY_COLS = ["nct_id", "intervention_type", "intervention_name"]
 _LOCATIONS_KEY_COLS = ["nct_id", "facility", "city", "state", "country"]
@@ -222,22 +218,14 @@ def transform_all(
 
     studies_df = merge_duplicate_studies(studies_rows)
 
-    if not studies_df.empty:
-        # LLD §2.1 — NCT ID format drop. No df is returned by
-        # validate.check_nct_id_format (CheckResult only), so this drop — and the
-        # resulting cascade of orphaned interventions/locations rows that
-        # validate.check_referential_integrity (§2.3) cleans up downstream — happens
-        # here, before validate.run_all_checks ever sees the data.
-        valid_id_mask = studies_df["nct_id"].astype(str).str.match(_NCT_ID_RE, na=False)
-        studies_df = studies_df[valid_id_mask].reset_index(drop=True)
-
-    if not studies_df.empty:
-        # LLD §2.5 — required-fields drop. Same reasoning as above:
-        # validate.check_required_fields returns list[CheckResult] only (no df), so this
-        # module owns the actual drop of rows missing nct_id/brief_title/overall_status/
-        # conditions.
-        studies_df = studies_df.dropna(subset=_REQUIRED_STUDY_COLS).reset_index(drop=True)
-
+    # NCT-ID-format and required-field drops (LLD §2.1/§2.5) happen inside
+    # validate.run_all_checks, not here — those checks own dropping the rows they flag
+    # (the same (clean_df, CheckResult) pattern check_referential_integrity/
+    # check_enrollment_plausibility/check_age_parsing already use) so quality_report.json
+    # reports the real affected counts instead of always showing 0 against already-clean
+    # data. composite_text is therefore built here over the full pre-validation set;
+    # any rows later dropped by those checks are dropped in their entirety, composite_text
+    # included.
     if not studies_df.empty:
         studies_df["composite_text"] = studies_df.apply(
             lambda row: build_composite_text(row.to_dict(), synonym_table), axis=1

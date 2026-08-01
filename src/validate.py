@@ -58,19 +58,24 @@ def _zero_warn_fail_status(affected_count: int, affected_pct: float, warn_max_pc
     return "warn" if affected_pct <= warn_max_pct else "fail"
 
 
-def check_nct_id_format(studies_df: pd.DataFrame) -> CheckResult:
-    """Validate nct_id against ^NCT\\d{8}$; offenders are dropped upstream — LLD §2.1."""
+def check_nct_id_format(studies_df: pd.DataFrame) -> tuple[pd.DataFrame, CheckResult]:
+    """Validate nct_id against ^NCT\\d{8}$; drop offenders and return (clean_df, result) — LLD §2.1.
+
+    Owns the actual drop (mirrors check_referential_integrity/check_enrollment_plausibility/
+    check_age_parsing's pattern) so affected_count reflects the real pre-drop data instead of
+    always reporting 0 against an already-filtered frame.
+    """
     total = len(studies_df)
     if total and "nct_id" in studies_df.columns:
         valid_mask = studies_df["nct_id"].astype(str).str.match(_NCT_ID_PATTERN, na=False)
         invalid_mask = ~valid_mask
     else:
-        invalid_mask = pd.Series([], dtype=bool)
+        invalid_mask = pd.Series([False] * total, index=studies_df.index)
     affected = int(invalid_mask.sum())
     pct = _pct(affected, total)
-    return CheckResult(
+    result = CheckResult(
         name="nct_id_format",
-        description="Validates nct_id matches ^NCT\\d{8}$; non-conforming rows are dropped (transform.py, upstream of this report).",
+        description="Validates nct_id matches ^NCT\\d{8}$; non-conforming rows are dropped.",
         status="fail" if affected > 0 else "pass",
         scope="overall",
         affected_count=affected,
@@ -79,23 +84,35 @@ def check_nct_id_format(studies_df: pd.DataFrame) -> CheckResult:
         threshold_note="fail>0%",
         sample_offending_ids=_sample_ids(studies_df, invalid_mask),
     )
+    clean_df = studies_df.loc[~invalid_mask].reset_index(drop=True)
+    return clean_df, result
 
 
-def check_required_fields(studies_df: pd.DataFrame, required_cols: list[str]) -> list[CheckResult]:
-    """Fail on any missing value in required fields (nct_id, brief_title, overall_status, conditions) — LLD §2.5."""
+def check_required_fields(
+    studies_df: pd.DataFrame, required_cols: list[str]
+) -> tuple[pd.DataFrame, list[CheckResult]]:
+    """Fail on any missing value in required fields (nct_id, brief_title, overall_status,
+    conditions); drop offending rows and return (clean_df, results) — LLD §2.5.
+
+    Every column's affected_count/total_count is computed against the same pre-drop
+    `studies_df` (passed in), so per-column rates are comparable; the drop itself removes a
+    row if it's missing ANY required field (matching transform.py's prior dropna semantics).
+    """
     total = len(studies_df)
     results: list[CheckResult] = []
+    combined_missing = pd.Series([False] * total, index=studies_df.index)
     for col in required_cols:
         if col in studies_df.columns:
             missing_mask = studies_df[col].isna()
         else:
-            missing_mask = pd.Series([True] * total)
+            missing_mask = pd.Series([True] * total, index=studies_df.index)
+        combined_missing |= missing_mask
         affected = int(missing_mask.sum())
         pct = _pct(affected, total)
         results.append(
             CheckResult(
                 name=f"required_field_missing_{col}",
-                description=f"Fails if any row is missing the required field '{col}'; such rows are dropped (transform.py, upstream of this report).",
+                description=f"Fails if any row is missing the required field '{col}'; such rows are dropped.",
                 status="fail" if affected > 0 else "pass",
                 scope="overall",
                 affected_count=affected,
@@ -105,7 +122,8 @@ def check_required_fields(studies_df: pd.DataFrame, required_cols: list[str]) ->
                 sample_offending_ids=_sample_ids(studies_df, missing_mask),
             )
         )
-    return results
+    clean_df = studies_df.loc[~combined_missing].reset_index(drop=True)
+    return clean_df, results
 
 
 def check_missing_rate(
@@ -375,8 +393,11 @@ def run_all_checks(
     passed in, so quality_report.json never claims a fix that isn't actually on disk."""
     checks: list[CheckResult] = []
 
-    checks.append(check_nct_id_format(studies_df))
-    checks.extend(check_required_fields(studies_df, _REQUIRED_STUDY_COLS))
+    studies_df, nct_id_check = check_nct_id_format(studies_df)
+    checks.append(nct_id_check)
+
+    studies_df, required_field_checks = check_required_fields(studies_df, _REQUIRED_STUDY_COLS)
+    checks.extend(required_field_checks)
 
     interventions_df, ref_check_interventions = check_referential_integrity(
         studies_df, interventions_df, "interventions"

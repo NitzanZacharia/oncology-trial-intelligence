@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-01T08:50:05Z",
+  "generated_at": "2026-08-01T09:11:04Z",
   "overall_status": "fail",
   "row_counts": {
     "raw_rows_pulled": 15425,
@@ -11,7 +11,7 @@
   "checks": [
     {
       "name": "nct_id_format",
-      "description": "Validates nct_id matches ^NCT\\d{8}$; non-conforming rows are dropped (transform.py, upstream of this report).",
+      "description": "Validates nct_id matches ^NCT\\d{8}$; non-conforming rows are dropped.",
       "status": "pass",
       "scope": "overall",
       "affected_count": 0,
@@ -23,7 +23,7 @@
     },
     {
       "name": "required_field_missing_nct_id",
-      "description": "Fails if any row is missing the required field 'nct_id'; such rows are dropped (transform.py, upstream of this report).",
+      "description": "Fails if any row is missing the required field 'nct_id'; such rows are dropped.",
       "status": "pass",
       "scope": "overall",
       "affected_count": 0,
@@ -35,7 +35,7 @@
     },
     {
       "name": "required_field_missing_brief_title",
-      "description": "Fails if any row is missing the required field 'brief_title'; such rows are dropped (transform.py, upstream of this report).",
+      "description": "Fails if any row is missing the required field 'brief_title'; such rows are dropped.",
       "status": "pass",
       "scope": "overall",
       "affected_count": 0,
@@ -47,7 +47,7 @@
     },
     {
       "name": "required_field_missing_overall_status",
-      "description": "Fails if any row is missing the required field 'overall_status'; such rows are dropped (transform.py, upstream of this report).",
+      "description": "Fails if any row is missing the required field 'overall_status'; such rows are dropped.",
       "status": "pass",
       "scope": "overall",
       "affected_count": 0,
@@ -59,7 +59,7 @@
     },
     {
       "name": "required_field_missing_conditions",
-      "description": "Fails if any row is missing the required field 'conditions'; such rows are dropped (transform.py, upstream of this report).",
+      "description": "Fails if any row is missing the required field 'conditions'; such rows are dropped.",
       "status": "pass",
       "scope": "overall",
       "affected_count": 0,

@@ -206,3 +206,86 @@ tabs once before final submission.
 
 **Action taken:** Committed `app.py`, `requirements.txt`
 (streamlit added), and this log entry.
+
+---
+
+## 2026-08-01T12:15:00Z — Checkpoint 6: code review pass
+
+**What was done:** The `code-reviewer` agent installed earlier (per the
+prior deviation entry) wasn't hot-loaded into this session's available
+subagent types (it's registered on disk but the running session's agent
+list was fixed at session start), so the review ran via the
+`general-purpose` agent given an explicit code-reviewer persona and brief —
+same substitution pattern used for `python-pro` in earlier checkpoints.
+Reviewed all of `/src/`, `etl.py`, `app.py` against `docs/HLD.md`/
+`docs/LLD.md` as the source of truth.
+
+**Findings, fixed directly by the reviewer (verified independently before
+accepting):**
+
+1. **Real one-way-arrow violation:** `app.py` transitively imported
+   `src.extract` via `storage.py → transform.py → extract.py` (storage.py
+   imported two dtype-casting helpers from transform.py, which imports
+   `CANCER_TYPE_SHORTLIST` from extract.py). No network call actually
+   fired at import time, but this violated `HLD.md` §1's explicit
+   constraint regardless. **Fix:** moved `_cast_studies_dtypes`/
+   `_cast_child_dtypes` into `src/storage.py` itself (their natural home),
+   `transform.py` now imports them from `storage.py` instead — reversing
+   the dependency direction so `storage.py` has zero `src.*` imports.
+   Independently verified via `sys.modules` introspection after `import
+   app`: `src.extract` and `src.transform` are both absent from the
+   process's loaded modules. **PASS.**
+2. **Non-atomic checkpoint write.** `write_raw_checkpoint` wrote directly
+   to the final path; a crash mid-write would leave a truncated file that
+   `has_checkpoint` would then treat as a complete, valid checkpoint on
+   resume, permanently breaking that condition's data with no re-pull path
+   — undermining the HLD's own stated "ownership of failure modes" design
+   point. **Fix:** write-to-`.tmp`-then-`os.replace()`, the standard
+   atomic-write pattern. Confirmed present and correct on read.
+
+**Finding, flagged by the reviewer as a design question — investigated and
+fixed here rather than deferred, since it's a genuine spec deviation, not
+just a style question:** `check_nct_id_format`/`check_required_fields` in
+`validate.py` always reported 0 affected / status "pass", because
+`transform.transform_all` already dropped those rows *before*
+`validate.run_all_checks` ever saw the data — so `quality_report.json`
+could never actually surface an NCT-ID-format or required-field violation,
+even if thousands of rows were silently dropped upstream. This
+structurally contradicts `LLD.md` §1.5's row-level rule ("dropped **and
+reported**") and §2.1's "fail if any occurrence at all" threshold, which
+could never trigger. Per ground rule 1, fixed the same way as the earlier
+`run_all_checks` bug: made `check_nct_id_format`/`check_required_fields`
+own their own drop and return `(clean_df, CheckResult(s))` — the same
+pattern `check_referential_integrity`/`check_enrollment_plausibility`/
+`check_age_parsing` already use — removed the now-redundant drop logic
+from `transform.transform_all`, updated `run_all_checks` to thread the
+returned `studies_df` through both new checks, and updated `docs/LLD.md`
+§3.3/§3.4 signatures and docstrings to match. Re-ran `etl.py` end-to-end
+afterward: `studies_written` reconciled identically (13,335, same as
+before), and `nct_id_format`/`required_field_missing_*` now correctly show
+`0/13,335` computed against the real pre-drop total rather than an
+already-filtered one — i.e., these checks are now structurally capable of
+catching a real violation if one existed, which they weren't before. Files
+changed: `src/validate.py`, `src/transform.py`, `docs/LLD.md`.
+
+**Flagged, not fixed (informational-only, judged not worth the risk of an
+unattended edit):**
+- `etl.py`'s inline `duplicate_studies_merged` computation reads
+  `raw_study.get("protocolSection", {})` without a null-guard for an
+  explicit `protocolSection: null` (vs. simply absent). This has never
+  occurred against the real API (confirmed: the live pull that already
+  ran twice, ~15,425 raw records, hit no such case) and only affects an
+  informational summary metric, not any written data or quality-report
+  status — left as-is rather than risk an unattended edit to `etl.py`'s
+  orchestration logic for a case that can't currently be observed to
+  occur.
+- Two minor product-behavior notes in `app.py` (age=0 sentinel for "skip
+  age filter"; multi-phase trials bucketed as their own landscape-chart
+  category rather than split across bars) — both reasonable, intentional
+  UX calls, not defects.
+
+**Concern for human review:** None beyond what's already flagged above.
+
+**Action taken:** Committed `src/storage.py`, `src/transform.py`,
+`src/validate.py`, `src/extract.py`, `docs/LLD.md`, and the re-generated
+`data/processed/*` + `data/raw/*` (re-run confirms identical results).

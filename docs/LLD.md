@@ -421,7 +421,13 @@ def transform_all(
     raw_by_condition: dict[str, list[dict]],
     synonym_table: dict[str, list[str]],
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Run the full transform stage; return (studies_df, interventions_df, locations_df) pre-validation."""
+    """Run the full transform stage; return (studies_df, interventions_df, locations_df) pre-validation.
+
+    Does NOT drop NCT-ID-format or required-field violations — that happens inside
+    validate.check_nct_id_format/check_required_fields (§3.4), which own their own drop the
+    same way check_referential_integrity/check_enrollment_plausibility/check_age_parsing do,
+    so quality_report.json's affected_count/total_count for those checks describe the real
+    pre-drop data rather than trivially reporting 0 against an already-filtered frame."""
     ...
 ```
 
@@ -449,12 +455,14 @@ class CheckResult:
     sample_offending_ids: list[str]
     per_condition: dict[str, dict] | None = None
 
-def check_nct_id_format(studies_df: pd.DataFrame) -> CheckResult:
-    """Validate nct_id against ^NCT\\d{8}$; offenders are dropped upstream — LLD §2.1."""
+def check_nct_id_format(studies_df: pd.DataFrame) -> tuple[pd.DataFrame, CheckResult]:
+    """Validate nct_id against ^NCT\\d{8}$; drop offenders and return (clean_df, result) — LLD §2.1."""
     ...
 
-def check_required_fields(studies_df: pd.DataFrame, required_cols: list[str]) -> list[CheckResult]:
-    """Fail on any missing value in required fields (nct_id, brief_title, overall_status, conditions) — LLD §2.5."""
+def check_required_fields(
+    studies_df: pd.DataFrame, required_cols: list[str]
+) -> tuple[pd.DataFrame, list[CheckResult]]:
+    """Fail on any missing value in required fields (nct_id, brief_title, overall_status, conditions); drop offending rows and return (clean_df, results) — LLD §2.5."""
     ...
 
 def check_missing_rate(
@@ -499,10 +507,11 @@ def run_all_checks(
 ) -> tuple[dict, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Run every check above in order, assemble the full quality_report.json dict, and
     return it alongside the cleaned (studies_df, interventions_df, locations_df) —
-    referential-integrity orphans dropped, enrollment out-of-range values nulled, ages
-    parsed to float — LLD §1.5. The report and the returned tables must describe the
-    same data: callers write these returned DataFrames to /data/processed, not the ones
-    passed in, so quality_report.json never claims a fix that isn't actually on disk."""
+    NCT-ID-format and required-field violations dropped, referential-integrity orphans
+    dropped, enrollment out-of-range values nulled, ages parsed to float — LLD §1.5. The
+    report and the returned tables must describe the same data: callers write these
+    returned DataFrames to /data/processed, not the ones passed in, so quality_report.json
+    never claims a fix that isn't actually on disk."""
     ...
 
 def write_quality_report(report: dict, path: Path) -> None:
