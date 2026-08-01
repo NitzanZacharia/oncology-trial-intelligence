@@ -176,7 +176,7 @@ def render_patient_match(
     st.subheader(f"{len(ranked)} matching trials for {condition}")
 
     export_rows = []
-    for row_index, score in ranked:
+    for rank, (row_index, score) in enumerate(ranked):
         trial = studies_df.loc[row_index]
         trial_vector = matrix[row_index]
         matched_terms = matching.explain_match(query_vector, trial_vector, feature_names, top_k=5)
@@ -197,6 +197,8 @@ def render_patient_match(
         )
 
         with st.container(border=True):
+            if rank == 0:
+                st.badge("Best Match", icon="🏆", color="primary")
             st.markdown(
                 f"**[{trial['nct_id']}](https://clinicaltrials.gov/study/{trial['nct_id']})** "
                 f"— {trial['brief_title']}"
