@@ -5,7 +5,7 @@ requests
 # (full pipeline + test suite + app boot); pinned below 4 to avoid an untested future
 # major version silently breaking a graded, reproducibility-sensitive pipeline.
 pandas>=2.3,<4
-scikit-learn
-joblib
-streamlit
+scikit-learn==1.8.0
+joblib==1.5.3
+streamlit==1.60.0
 pytest
