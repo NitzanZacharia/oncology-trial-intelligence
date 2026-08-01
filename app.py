@@ -6,6 +6,7 @@ one-time vectorizer-fitting function reserved for the ETL entry point. Run with
 
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -43,6 +44,23 @@ def _condition_options(studies_df: pd.DataFrame) -> list[str]:
             if token:
                 tokens.add(token)
     return sorted(tokens)
+
+
+def _zero_anchored_bar_chart(counts: pd.Series, category_label: str, value_label: str = "Count") -> alt.Chart:
+    """Bar chart with an explicit domainMin=0 y-axis. st.bar_chart's default y-axis
+    doesn't reliably anchor at zero across Streamlit/Altair versions, which makes real,
+    substantial categories render as barely-visible slivers relative to the largest one —
+    force it explicitly rather than relying on the default.
+    """
+    data = counts.rename(value_label).rename_axis(category_label).reset_index()
+    return (
+        alt.Chart(data)
+        .mark_bar()
+        .encode(
+            x=alt.X(f"{category_label}:N", sort="-y", title=category_label),
+            y=alt.Y(f"{value_label}:Q", scale=alt.Scale(domainMin=0), title=value_label),
+        )
+    )
 
 
 def _condition_mask(studies_df: pd.DataFrame, condition: str) -> pd.Series:
@@ -156,21 +174,30 @@ def render_trial_landscape(studies_df: pd.DataFrame) -> None:
     with col1:
         st.subheader("Phase mix")
         phase_counts = subset["phases"].fillna("Not specified").replace("", "Not specified").value_counts()
-        st.bar_chart(phase_counts)
+        st.altair_chart(_zero_anchored_bar_chart(phase_counts, "Phase"))
     with col2:
         st.subheader("Sponsor class")
         sponsor_counts = subset["sponsor_class"].fillna("Unknown").value_counts()
-        st.bar_chart(sponsor_counts)
+        st.altair_chart(_zero_anchored_bar_chart(sponsor_counts, "Sponsor class"))
+        st.caption(
+            "\"OTHER\" includes most academic/hospital sponsors — ClinicalTrials.gov's "
+            "sponsor-class enum has no separate academic category."
+        )
 
     st.subheader("Recruiting status")
-    status_counts = subset["overall_status"].value_counts()
-    st.bar_chart(status_counts)
+    recruiting_count = int((subset["overall_status"] == "RECRUITING").sum())
+    st.metric("Recruiting trials", recruiting_count, border=True)
 
     st.subheader("Studies first posted per year")
     years = pd.to_datetime(subset["study_first_post_date"], errors="coerce").dt.year
     year_counts = years.dropna().astype(int).value_counts().sort_index()
     if not year_counts.empty:
         st.line_chart(year_counts)
+        latest_year = int(year_counts.index.max())
+        st.caption(
+            f"{latest_year} is partial (year-to-date), not a full year — the recent dip "
+            "shouldn't be read as a real decline in trial activity."
+        )
     else:
         st.caption("No parseable post dates for this condition.")
 
