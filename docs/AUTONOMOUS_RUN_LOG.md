@@ -128,3 +128,81 @@ necessary for reproducibility), or use Git LFS.
 
 **Action taken:** Committed `data/raw/*.json` and `data/processed/*`
 (6 tables/artifacts + quality_report.json) as commit `014c605`.
+
+---
+
+## 2026-08-01T12:00:00Z — Deviation: plan verification steps rewritten for Windows
+
+**What happened:** Before starting Checkpoint 5, the user (mid-turn) pointed
+out that `docs/AUTONOMOUS_RUN_PLAN.md`'s verification steps for Checkpoint 5
+and the Checkpoint 7 final smoke test assumed a POSIX shell (`source`,
+`curl`, background-job `kill %1`, `grep`) but this machine is native
+Windows. Directed a fix: replace the grep architecture-conformance check
+with a small Python script asserting `"extract"`/`"fit_vectorizer"` don't
+appear in `app.py`; replace the curl/kill smoke test with a Python script
+using `subprocess.Popen` + `urllib.request` + `proc.terminate()`; and
+correct the final clean-clone smoke test's venv activation to the Windows
+equivalent (`.venv\Scripts\python.exe` invoked directly, no
+`bin/activate`).
+
+**Action taken:** Rewrote both sections of `docs/AUTONOMOUS_RUN_PLAN.md` in
+place per the user's exact instructions. Also had python-pro, code-reviewer,
+and technical-writer agents installed globally
+(`~/.claude/agents/{python-pro,code-reviewer,technical-writer}.md` via the
+`agent-installer` subagent, run in parallel with `app.py` implementation
+below) for use in Checkpoints 6-7.
+
+**Concern for human review:** None — this was a correction to the plan's
+own verification mechanism, not to any locked design doc (`HLD.md`/
+`LLD.md`/`project-plan.md`), so ground rule 1 doesn't apply here; the plan
+itself isn't one of the three locked documents.
+
+---
+
+## 2026-08-01T12:02:00Z — Checkpoint 5: `app.py`
+
+**What was built:** `app.py`, implementing all three screens from `HLD.md`
+(Patient Match, Trial Landscape, Pipeline Health) as `st.tabs`, using the
+exact caching stubs from `LLD.md` §4 (`load_processed_tables` /
+`load_matching_artifacts` / `load_quality_report`, keyed on
+`storage.processed_dir_fingerprint()`). Patient Match: form (condition
+dropdown derived from the data's own `shortlist_conditions` column rather
+than a hardcoded/duplicated constant, biomarker tags, stage, sex, age) →
+`matching.build_query_text` → `matching.hard_filter` →
+`matching.vectorize_query` → `matching.rank_candidates` →
+`matching.explain_match` per trial, rendered with a clickable NCT link,
+phase/sponsor/location metadata, and matched-term explanation. Trial
+Landscape: phase mix / sponsor class / recruiting-status / posts-per-year
+charts for a selected condition, computed from the in-memory table only.
+Pipeline Health: renders `quality_report.json` — overall status badge,
+row counts, and an expander per check with its threshold note, sample
+offending IDs, and per-condition breakdown table where present.
+
+Added `streamlit` to `requirements.txt` (was missing — every other
+`src/*.py` dependency was already listed from earlier checkpoints, but
+nothing had added the app-layer dependency yet).
+
+**Self-verification (per the rewritten, Windows-correct plan steps
+above):**
+1. One-way-arrow check: `python -c "assert 'extract' not in open('app.py').read(); assert 'fit_vectorizer' not in open('app.py').read()"` — initially **failed** on first write, because the module docstring itself explained *why* `fit_vectorizer` isn't called (mentioning it by name). Reworded the docstring to describe the constraint without the literal substring. Re-ran: **PASS**.
+2. Streamlit smoke test (`subprocess.Popen` + `urllib.request`, per the
+   rewritten plan): app started, served HTTP 200 on `localhost:8501`
+   within the poll window, no exceptions in stdout/stderr, terminated
+   cleanly. **PASS**.
+
+**Judgment call:** The LLD §3.6 caching stub signatures type-hint
+`processed_dir` as `str`; `app.py` computes the fingerprint via
+`storage.processed_dir_fingerprint(PROCESSED_DIR)` (a `Path`, matching that
+function's own signature) once, uncached, at the top of `main()`, then
+passes `str(PROCESSED_DIR)` into the three cached loaders — matching both
+signatures exactly rather than picking one and adjusting the other.
+
+**Concern for human review:** None from this checkpoint. Streamlit's
+initial-page-load smoke test (per the plan) confirms the app boots and
+serves without exceptions, but doesn't exercise the Patient Match form
+submission path itself (that needs an interactive browser session, out of
+scope for an unattended check) — worth a human clicking through the three
+tabs once before final submission.
+
+**Action taken:** Committed `app.py`, `requirements.txt`
+(streamlit added), and this log entry.

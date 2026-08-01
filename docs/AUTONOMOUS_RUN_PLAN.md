@@ -55,20 +55,33 @@ the rules below, and log everything to `docs/AUTONOMOUS_RUN_LOG.md`.
 
 - Implement per `LLD.md` §4 caching strategy and the three-screen concept
   (Patient Match, Trial Landscape, Pipeline Health) from `HLD.md`.
-- Self-verify architecture conformance mechanically, not by reading:
+- Self-verify architecture conformance mechanically, not by reading. This
+  machine runs native Windows (no `bin/activate`, no reliable `grep`/`curl`/
+  job-control `kill %1` across shells), so verification uses small Python
+  scripts against the repo's own interpreter instead of POSIX shell tools:
+  ```python
+  # checks neither "extract" nor "fit_vectorizer" appears in app.py
+  text = open("app.py", encoding="utf-8").read()
+  assert "extract" not in text, "app.py references extract — one-way-arrow violation"
+  assert "fit_vectorizer" not in text, "app.py references fit_vectorizer — one-way-arrow violation"
   ```
-  grep -n "extract\|fit_vectorizer" app.py
-  ```
-  This must return nothing. If it returns something, fix it before
+  This must pass with no assertion error. If it fails, fix it before
   proceeding — this is the one-way-arrow constraint from HLD §1.
 - Smoke-test it actually runs:
+  ```python
+  import subprocess, time, urllib.request
+
+  proc = subprocess.Popen(
+      ["streamlit", "run", "app.py", "--server.headless", "true"]
+  )
+  try:
+      time.sleep(8)
+      status = urllib.request.urlopen("http://localhost:8501").status
+      assert status == 200, f"expected 200, got {status}"
+  finally:
+      proc.terminate()
   ```
-  streamlit run app.py --server.headless true &
-  sleep 5
-  curl -s -o /dev/null -w "%{http_code}" http://localhost:8501
-  kill %1
-  ```
-  Confirm the curl returns `200`. Log the result.
+  Confirm the request returns `200`. Log the result.
 
 ## Checkpoint 6 — Review pass
 
@@ -87,17 +100,22 @@ the rules below, and log everything to `docs/AUTONOMOUS_RUN_LOG.md`.
   `project-plan.md` §0), and how AI was used — reference
   `docs/AUTONOMOUS_RUN_LOG.md` and `/ai_transcript/` explicitly here.
 - Final clean-clone smoke test — this is the one step that most needs to
-  actually happen, unattended or not:
+  actually happen, unattended or not. Windows has no `bin/activate` (venv
+  activation here is `.venv\Scripts\activate.bat`, or simpler and more
+  reliable from an automated script: invoke `.venv\Scripts\python.exe`
+  directly without activating at all) and no reliable `curl`/job-control
+  `kill %1` across shells, so this uses the repo's own interpreter
+  end-to-end:
   ```
-  cd /tmp && rm -rf smoke-test && git clone <repo-path> smoke-test && cd smoke-test
-  python -m venv .venv && source .venv/bin/activate
-  pip install -r requirements.txt
-  python etl.py
-  streamlit run app.py --server.headless true &
-  sleep 5
-  curl -s -o /dev/null -w "%{http_code}" http://localhost:8501
-  kill %1
+  cd <temp-dir> && rmdir /s /q smoke-test (if present) && git clone <repo-path> smoke-test && cd smoke-test
+  python -m venv .venv
+  .venv\Scripts\python.exe -m pip install -r requirements.txt
+  .venv\Scripts\python.exe etl.py
   ```
+  then the same Python-based Streamlit smoke test as Checkpoint 5
+  (`subprocess.Popen([".venv\\Scripts\\streamlit.exe", "run", "app.py",
+  "--server.headless", "true"])`, wait, `urllib.request.urlopen(...)`
+  expecting `200`, `proc.terminate()`), run via `.venv\Scripts\python.exe`.
   Log the outcome. This is the single most important self-verification in
   the whole plan — it's the exact sequence a reviewer will run.
 
