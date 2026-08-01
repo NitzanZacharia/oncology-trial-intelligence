@@ -16,6 +16,7 @@ from src.synonyms import SYNONYM_TABLE
 PROCESSED_DIR = Path("data/processed")
 
 _STATUS_ICON = {"pass": "\U0001f7e2", "warn": "\U0001f7e1", "fail": "\U0001f534"}
+_CHECK_STATUS_SORT_ORDER = {"fail": 0, "warn": 1, "pass": 2}
 
 
 @st.cache_data
@@ -225,6 +226,14 @@ def render_pipeline_health(quality_report: dict) -> None:
     status = quality_report.get("overall_status", "unknown")
     icon = _STATUS_ICON.get(status, "⚪")
     st.subheader(f"{icon} Overall status: {status.upper()}")
+
+    checks = quality_report.get("checks", [])
+    if status != "pass":
+        driving_checks = [c for c in checks if c["status"] == status]
+        if driving_checks:
+            summary = ", ".join(f"{c['name']} ({c['affected_pct']}%)" for c in driving_checks)
+            st.caption(f"Driven by: {summary}")
+
     st.caption(f"Report generated at: {quality_report.get('generated_at', 'unknown')}")
 
     row_counts = quality_report.get("row_counts", {})
@@ -234,7 +243,8 @@ def render_pipeline_health(quality_report: dict) -> None:
             col.metric(key.replace("_", " ").title(), value)
 
     st.subheader("Checks")
-    for check in quality_report.get("checks", []):
+    sorted_checks = sorted(checks, key=lambda c: _CHECK_STATUS_SORT_ORDER.get(c["status"], 3))
+    for check in sorted_checks:
         check_icon = _STATUS_ICON.get(check["status"], "⚪")
         title = (
             f"{check_icon} {check['name']} — {check['status'].upper()} "
