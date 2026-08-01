@@ -60,7 +60,7 @@ ClinicalTrials.gov API v2
                   │  (read-only, cached)
                   ▼
                app.py
-          Streamlit UI (3 tabs)
+          Streamlit UI (4 tabs)
    patient query -> filter -> rank -> explain
 ```
 
@@ -100,19 +100,33 @@ repeatedly.
   `.transform()` against that already-fitted vectorizer, so no re-fit ever
   happens per user interaction.
 
-**App** (`app.py`, three tabs):
+**App** (`app.py`, four tabs, styled via `.streamlit/config.toml`'s
+deep-teal clinical theme):
 - **Patient Match** — profile form (condition, biomarker tags, stage, sex,
   age) → hard filter (`RECRUITING` + condition + sex/age eligibility) →
   TF-IDF cosine ranking → explanation panel showing the specific
-  overlapping terms that drove each match, in plain language. No model,
-  no LLM call at runtime — every score is reproducible offline from what's
-  on disk.
+  overlapping terms that drove each match, in plain language. The #1
+  ranked result carries a "Best Match" badge, every field has an inline
+  tooltip explaining what it means, and the full ranked shortlist can be
+  exported as CSV. No model, no LLM call at runtime — every score is
+  reproducible offline from what's on disk.
 - **Trial Landscape** — phase mix, sponsor-class breakdown, recruiting
   status, and posting-year trend for a chosen cancer type, computed
   entirely from the in-memory table.
 - **Pipeline Health** — the data-quality report as a visible product
   surface: overall status, row counts, and every individual check with its
-  threshold, offending examples, and per-condition breakdown.
+  threshold, offending examples, and per-condition breakdown, plus a
+  plain-language explanation of what each status means and, when the
+  overall status isn't a pass, specifically why (e.g. why
+  `missing_rate_phases` failing is expected, not a defect).
+- **About / How to read this** — a plain-language guide and glossary
+  aimed at a patient/caregiver reader, not just the navigator persona the
+  other three tabs assume: what the tool is, what each tab does, and
+  definitions for the jargon a first-time reader hits immediately (NCT ID,
+  phase, recruiting status, sponsor class, eligibility criteria,
+  biomarker). Purely additive — see `docs/EXPLAINABILITY_PLAN.md` for the
+  design rationale and `ai_transcript/followup-4-explainability-layer.md`
+  for how it was built.
 
 ## Data model
 
@@ -177,6 +191,14 @@ on ClinicalTrials.gov between runs), but not byte-identical, output.
 pytest tests/
 ```
 
+The root `conftest.py` (empty — it exists only to anchor pytest's rootdir)
+is what makes the bare command above resolve `src` imports correctly.
+Without it, `pytest tests/` fails on a genuinely fresh clone with
+`ModuleNotFoundError: No module named 'src'`; `python -m pytest tests/`
+masks the issue by prepending the working directory to `sys.path` itself,
+which is how this went unnoticed until it was tested literally as
+documented (`ai_transcript/followup-5-verification-caught-bugs.md`).
+
 `tests/test_matching.py` covers ranking determinism (`rank_candidates`
 returns the same order every time for the same inputs), the
 `hard_filter`/index-alignment contract, and `explain_match`.
@@ -225,3 +247,38 @@ filters) — closing out two previously-open verification gaps. See
 `/ai_transcript/followup-1-data-volume-and-dependency-hardening.md`,
 `followup-2-chart-rendering-fixes.md`, and
 `followup-3-chrome-devtools-verification.md` for the full detail.
+
+A fourth tab, "About / How to read this," was then added as a purely
+additive explainability layer aimed at a patient/caregiver reader rather
+than just the trial-navigator persona the rest of the app assumes — a
+plain-language intro, per-tab explanations, a glossary, inline tooltips
+throughout Patient Match and Trial Landscape, and a rewritten,
+plain-language explanation of the Pipeline Health status (replacing the
+raw `"Driven by: missing_rate_phases (25.7368%)"` line with an explicit
+"here's why this is expected, not a defect" explanation). Planned in
+`docs/EXPLAINABILITY_PLAN.md` before any code changed, drafted with the
+`technical-writer` subagent for the copy, and corrected against the actual
+code before implementation (see that doc for two things the draft got
+wrong: a persona claim not actually present in `docs/project-plan.md`, and
+a factual error in the Pipeline Health copy). Full account in
+`ai_transcript/followup-4-explainability-layer.md`.
+
+Two more real bugs were caught in the sessions that followed, both by
+testing the literal thing rather than trusting a prior pass — the same
+lesson as the pandas bug above, twice more: a bare `pytest tests/` failed
+on a genuinely fresh clone (`ModuleNotFoundError: No module named 'src'`,
+masked in every earlier check by `python -m pytest`'s self-anchoring
+behavior — see "Testing" above); and the Pipeline Health explanation
+panel, originally an `st.popover`, was found to float on top of whichever
+tab a user switched to next, because Streamlit's `st.tabs` doesn't unmount
+inactive tab content while `st.popover` renders as an overlay that escapes
+it — fixed by switching to `st.expander`, which stays in normal document
+flow. Detail in `ai_transcript/followup-5-verification-caught-bugs.md`.
+
+A final round of small, individually chrome-devtools-verified
+presentational changes followed: a custom deep-teal clinical theme
+(`.streamlit/config.toml`), a page icon, a "Best Match" badge on the #1
+ranked Patient Match result, a CSV export button for the ranked shortlist,
+and header styling (icon, callout, divider) — each one screenshotted
+before and after to confirm nothing outside its stated scope changed.
+Detail in `ai_transcript/followup-6-visual-polish.md`.

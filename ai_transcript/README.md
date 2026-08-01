@@ -53,3 +53,18 @@ session and from `docs/AUTONOMOUS_RUN_LOG.md`. This deviation is logged in
   actually render correctly, and exercised the Patient Match form
   end-to-end for the first time, closing out two previously-open
   human-review concerns.
+- `followup-4-explainability-layer.md` — a purely additive fourth "About /
+  How to read this" tab, tooltips, and a plain-language rewrite of the
+  Pipeline Health status, planned in `docs/EXPLAINABILITY_PLAN.md` and
+  aimed at a patient/caregiver reader alongside the original navigator
+  persona.
+- `followup-5-verification-caught-bugs.md` — two real bugs, both caught by
+  testing the literal documented command/interaction rather than trusting
+  an earlier check: a bare `pytest tests/` failing on a fresh clone
+  (fixed with a root `conftest.py`), and the Pipeline Health explanation
+  panel floating over other tabs after a tab switch (fixed by swapping
+  `st.popover` for `st.expander`).
+- `followup-6-visual-polish.md` — a custom deep-teal theme, a page icon, a
+  CSV export button for the Patient Match shortlist, a "Best Match" badge
+  on the #1 ranked result, and header styling — four small, individually
+  chrome-devtools-verified presentational changes.
