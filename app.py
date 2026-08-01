@@ -306,23 +306,20 @@ def render_pipeline_health(quality_report: dict) -> None:
     checks = quality_report.get("checks", [])
     driving_checks = [c for c in checks if c["status"] == status] if status != "pass" else []
 
-    badge_col, popover_col = st.columns([5, 1])
-    with badge_col:
-        st.subheader(f"{icon} Overall status: {status.upper()}")
-    with popover_col:
-        with st.popover("What does this mean?"):
-            st.markdown(f"**Current status: {status.upper()}**")
-            if driving_checks:
-                for c in driving_checks:
-                    plain = _CHECK_PLAIN_LANGUAGE.get(c["name"], c["description"])
-                    st.markdown(f"- **{c['name']}**, affecting {_fmt_pct(c['affected_pct'])}% of records: {plain}")
-                if any(c["name"] == "missing_rate_phases" for c in driving_checks):
-                    st.markdown(_MISSING_PHASES_EXPLANATION)
-            st.divider()
-            st.markdown(_STATUS_MEANING["fail"])
-            st.markdown(_STATUS_MEANING["warn"])
-            st.markdown(_STATUS_MEANING["pass"])
-            st.caption("See each check below for full detail.")
+    st.subheader(f"{icon} Overall status: {status.upper()}")
+    with st.expander("What does this mean?"):
+        st.markdown(f"**Current status: {status.upper()}**")
+        if driving_checks:
+            for c in driving_checks:
+                plain = _CHECK_PLAIN_LANGUAGE.get(c["name"], c["description"])
+                st.markdown(f"- **{c['name']}**, affecting {_fmt_pct(c['affected_pct'])}% of records: {plain}")
+            if any(c["name"] == "missing_rate_phases" for c in driving_checks):
+                st.markdown(_MISSING_PHASES_EXPLANATION)
+        st.divider()
+        st.markdown(_STATUS_MEANING["fail"])
+        st.markdown(_STATUS_MEANING["warn"])
+        st.markdown(_STATUS_MEANING["pass"])
+        st.caption("See each check below for full detail.")
 
     st.caption(f"Report generated at: {quality_report.get('generated_at', 'unknown')}")
 

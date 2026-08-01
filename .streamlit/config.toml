@@ -1,0 +1,38 @@
+[theme]
+# Clinical/oncology-appropriate palette: deep teal primary on a clean white
+# background — a trustworthy, medical-grade feel rather than Streamlit's
+# default blue. Single light theme (no light/dark toggle) to match the
+# already-verified white-background UI.
+base = "light"
+primaryColor = "#0F766E"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F7F6"
+textColor = "#152625"
+linkColor = "#0F766E"
+borderColor = "#D3E3E1"
+codeBackgroundColor = "#F1F7F6"
+codeTextColor = "#152625"
+
+# Semantic colors used by st.success/st.warning/st.error and any native
+# colored badges — aligned with the Pipeline Health tab's pass/warn/fail
+# semantics (rendered there via emoji, but these back any native elements).
+greenColor = "#15803D"
+yellowColor = "#CA8A04"
+redColor = "#B91C1C"
+
+dataframeBorderColor = "#D3E3E1"
+dataframeHeaderBackgroundColor = "#F1F7F6"
+
+# Drives Altair/Vega-Lite chart colors (Streamlit's default vega theme uses
+# this array's first entry for single-series marks, which is all the charts
+# in this app use) — without this, charts fall back to Vega's default blue
+# regardless of primaryColor above.
+chartCategoricalColors = ["#0F766E", "#155E75", "#B45309", "#6D28D9", "#57606A", "#B91C1C"]
+
+baseRadius = "8px"
+showWidgetBorder = true
+linkUnderline = false
+
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+headingFontWeights = [700, 700, 600, 600, 600, 600]
