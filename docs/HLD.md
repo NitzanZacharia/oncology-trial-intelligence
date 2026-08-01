@@ -138,14 +138,20 @@ disk.
 specifically because the brief rewards a smaller, reliable, well-designed
 solution over an overbuilt one: it needs zero extra dependencies beyond
 pandas (already required), is trivially diffable and human-inspectable in a
-PR review, and the data volume (~8 conditions × recruiting studies each, a
-few thousand rows across three tables at most) is nowhere near large enough
-for Parquet's columnar compression or SQLite's query engine to earn their
-added complexity. Type preservation (SQLite/Parquet's actual advantage) is a
-non-issue because the validation step already enforces types before write,
-and `app.py` re-parses dtypes on load the same way every time. CSV is the
-simplest thing that reliably works end-to-end for this data size, which is
-exactly what's being graded.
+PR review, and the data volume (~8 conditions × recruiting studies each,
+~181K rows across the three tables combined — confirmed against the actual
+live pull: 13,335 studies + 26,859 interventions + 141,449 locations) is
+nowhere near large enough for Parquet's columnar compression or SQLite's
+query engine to earn their added complexity. Type preservation (SQLite/
+Parquet's actual advantage) is a non-issue because the validation step
+already enforces types before write, and `app.py` re-parses dtypes on load
+the same way every time. CSV is the simplest thing that reliably works
+end-to-end for this data size, which is exactly what's being graded. This
+still holds at the real, larger-than-planned volume: pandas reads/writes
+~180K rows of CSV without strain (`app.py`'s cached load is a one-time cost
+per process, not a per-interaction one), and switching to Parquet now for a
+compression benefit that doesn't change any actual behavior isn't worth
+revisiting this late.
 
 **TF-IDF artifacts: joblib.** The matching approach is already committed to
 scikit-learn's `TfidfVectorizer` (the "no external ML dependency beyond

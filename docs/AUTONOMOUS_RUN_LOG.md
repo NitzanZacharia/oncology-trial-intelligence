@@ -66,17 +66,17 @@ required by `CLAUDE.md`.
    live API), but this is much larger than assumed at planning time. Not
    pushed to `origin` — everything in this run is committed locally only,
    since pushing to a shared remote was never explicitly authorized.
-2. **`HLD.md` §3's storage-format rationale says "a few thousand rows
-   across three tables at most."** The real, correctly-scoped pull for
-   these 8 high-incidence conditions is 13,335 studies / 141,449
-   locations — investigated in response to a direct question mid-run
-   (see the dedicated log entry) and confirmed to be genuine trial volume,
-   not a filter bug (`extract.py`'s actual request parameters were read
+2. ~~`HLD.md` §3's storage-format rationale says "a few thousand rows
+   across three tables at most."`~~ **Resolved** — the real,
+   correctly-scoped pull for these 8 high-incidence conditions is ~181K
+   rows combined (13,335 studies + 26,859 interventions + 141,449
+   locations), investigated in response to a direct question mid-run (see
+   the dedicated log entry) and confirmed to be genuine trial volume, not
+   a filter bug (`extract.py`'s actual request parameters were read
    directly and match `filter.overallStatus=RECRUITING` +
-   `query.cond=<condition>` exactly). CSV as a format choice still holds
-   at this scale, but the stated assumption in `HLD.md` §3 is factually
-   wrong and hasn't been corrected yet — left alone per an explicit
-   mid-run instruction not to fix/resize anything until directed.
+   `query.cond=<condition>` exactly). `HLD.md` §3 has since been updated
+   to state the real volume and explicitly confirm CSV still holds at this
+   scale (see the dedicated fix entry below this one).
 3. Two subagents (dispatched for the `etl.py` implementation and the
    Checkpoint 6 code review) made git commits despite being explicitly
    told not to run any git commands — both commits' actual content was
@@ -460,6 +460,30 @@ repo/commit size); leaving both as separate entries rather than merging,
 since this one specifically resolves the "is the filter broken" question
 the Checkpoint 4 entry didn't address. Awaiting direction on whether to
 correct `HLD.md` §3's stated assumption to match reality.
+
+---
+
+## 2026-08-01T12:50:00Z — Fix: `HLD.md` §3's outdated data-volume assumption
+
+**What was asked:** Directed to update `HLD.md` §3's storage-format
+rationale, which still said "a few thousand rows across three tables at
+most," to reflect the real, confirmed-legitimate volume (~181K rows: the
+row-count investigation entry above had already established the real
+numbers and that they're genuine trial volume, not a filter bug), and to
+add a line confirming CSV is still the right call at this scale.
+
+**Action taken:** Updated `HLD.md` §3: the parenthetical now reads "~181K
+rows across the three tables combined — confirmed against the actual live
+pull: 13,335 studies + 26,859 interventions + 141,449 locations," and
+added a closing sentence: pandas handles ~180K rows of CSV without strain,
+`app.py`'s cached load is a one-time per-process cost not a per-interaction
+one, and switching to Parquet now for a compression benefit that changes
+no actual behavior isn't worth revisiting this late. The section's actual
+conclusion (CSV over Parquet/SQLite) is unchanged — only the stated
+assumption backing it now matches reality.
+
+**Concern for human review:** None — this closes out the "flagged, not
+fixed" item from the final summary above regarding `HLD.md` §3.
 
 ---
 
