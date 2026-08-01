@@ -6,6 +6,8 @@ sex — who needs a ranked, explained shortlist of actively recruiting
 trials from [ClinicalTrials.gov](https://clinicaltrials.gov), not a raw
 keyword search.
 
+On a personal note: breast cancer runs in my family, which is part of why I care about health tech beyond it being an interesting technical domain — I wanted this project to reflect something I deeply care about.
+
 Full design rationale lives in `docs/project-plan.md`, `docs/HLD.md`, 
 and `docs/LLD.md`; how it was built is in `docs/AUTONOMOUS_RUN_LOG.md`
 and `/ai_transcript/` (see "AI usage" below).
