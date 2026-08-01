@@ -206,3 +206,23 @@ checkpoint, plus a README there explaining why it's a manually-authored
 summary rather than a raw `/export` dump (no tool available during the
 unattended run could invoke that CLI command — logged as a deviation in
 `docs/AUTONOMOUS_RUN_LOG.md`).
+
+After the autonomous run's 7 checkpoints, a further round of fixes
+happened: some via code-level investigation (confirming the ~181K-row data
+volume was genuine trial volume, not a filter bug, and correcting
+`HLD.md` §3's outdated estimate; pinning scikit-learn/joblib/streamlit as
+defense-in-depth after the pandas-version lesson from Checkpoint 7), and a
+distinct visual-debugging phase using a browser-automation tool
+(chrome-devtools MCP) to actually load the running app and screenshot it.
+That phase caught three real UI bugs by looking at rendered output rather
+than code: bar charts not anchoring at zero (making substantial categories
+render as invisible slivers), a comma-formatted year axis ("2,019" instead
+of "2019"), and the Pipeline Health tab's fail status being buried without
+an immediate explanation of what was driving it. A follow-up
+chrome-devtools pass then confirmed all three fixes render correctly in an
+actual browser session and exercised the Patient Match form end-to-end for
+the first time (a real query, ranked results, and working age/sex hard
+filters) — closing out two previously-open verification gaps. See
+`/ai_transcript/followup-1-data-volume-and-dependency-hardening.md`,
+`followup-2-chart-rendering-fixes.md`, and
+`followup-3-chrome-devtools-verification.md` for the full detail.

@@ -39,3 +39,17 @@ session and from `docs/AUTONOMOUS_RUN_LOG.md`. This deviation is logged in
   the final clean-clone smoke test, which caught a real pandas-3.x
   compatibility bug the main dev environment had been silently masking
   (Checkpoint 7, the final checkpoint of the autonomous run).
+- `followup-1-data-volume-and-dependency-hardening.md` — interactively
+  directed work after Checkpoint 7: investigating whether `studies.csv`'s
+  size reflects a filter bug (it doesn't), correcting `HLD.md` §3's
+  outdated row-count estimate, and pinning scikit-learn/joblib/streamlit
+  as defense-in-depth following the pandas-pin lesson from Checkpoint 7.
+- `followup-2-chart-rendering-fixes.md` — three UI defects found by
+  looking at the running app rather than the code: invisible bars from a
+  non-zero-anchored y-axis, comma-formatted year-axis labels, and the
+  Pipeline Health tab's fail status being buried without explanation.
+- `followup-3-chrome-devtools-verification.md` — a chrome-devtools MCP
+  browser-automation pass that verified the three chart fixes above
+  actually render correctly, and exercised the Patient Match form
+  end-to-end for the first time, closing out two previously-open
+  human-review concerns.

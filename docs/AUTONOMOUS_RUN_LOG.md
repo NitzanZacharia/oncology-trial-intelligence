@@ -83,11 +83,19 @@ required by `CLAUDE.md`.
    correct and has been kept, but this is worth knowing about as an agent-
    instruction-following gap, not something this run could self-correct
    (see the two dedicated log entries for `f5f44bd` and `01a9bce`).
-4. **`app.py`'s Patient Match form submission path** was verified by
+4. ~~**`app.py`'s Patient Match form submission path** was verified by
    static/mechanical checks (architecture-conformance assertion, HTTP 200
    on initial page load) but not by an actual interactive browser session
    — worth a human clicking through all three tabs once before final
-   submission.
+   submission.~~ **Resolved** — a dedicated chrome-devtools MCP
+   verification pass (see
+   `ai_transcript/followup-3-chrome-devtools-verification.md`) has since
+   exercised the form for real: a submitted query (breast + "HER2
+   positive") returned 20 correctly-rendered ranked results, and the
+   age/sex hard filters were confirmed live (the result set changed under
+   a restrictive age filter rather than silently passing everything
+   through). All three shipped tabs were clicked through and visually
+   confirmed in that same pass.
 5. The `/ai_transcript/` directory is a manually-authored substitute for
    the plan's originally-specified `/export`-based transcript capture, no
    tool available during this run could invoke that CLI command — logged
@@ -294,12 +302,14 @@ function's own signature) once, uncached, at the top of `main()`, then
 passes `str(PROCESSED_DIR)` into the three cached loaders — matching both
 signatures exactly rather than picking one and adjusting the other.
 
-**Concern for human review:** None from this checkpoint. Streamlit's
+**Concern for human review:** None from this checkpoint. ~~Streamlit's
 initial-page-load smoke test (per the plan) confirms the app boots and
 serves without exceptions, but doesn't exercise the Patient Match form
 submission path itself (that needs an interactive browser session, out of
 scope for an unattended check) — worth a human clicking through the three
-tabs once before final submission.
+tabs once before final submission.~~ **Resolved** — a later chrome-devtools
+MCP verification pass exercised the form for real (see
+`ai_transcript/followup-3-chrome-devtools-verification.md`).
 
 **Action taken:** Committed `app.py`, `requirements.txt`
 (streamlit added), and this log entry.
