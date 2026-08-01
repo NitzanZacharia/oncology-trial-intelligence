@@ -1,0 +1,534 @@
+{
+  "generated_at": "2026-08-01T08:50:05Z",
+  "overall_status": "fail",
+  "row_counts": {
+    "raw_rows_pulled": 15425,
+    "studies_written": 13335,
+    "interventions_written": 26859,
+    "locations_written": 141449,
+    "duplicate_studies_merged": 2090
+  },
+  "checks": [
+    {
+      "name": "nct_id_format",
+      "description": "Validates nct_id matches ^NCT\\d{8}$; non-conforming rows are dropped (transform.py, upstream of this report).",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "fail>0%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "required_field_missing_nct_id",
+      "description": "Fails if any row is missing the required field 'nct_id'; such rows are dropped (transform.py, upstream of this report).",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "fail>0%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "required_field_missing_brief_title",
+      "description": "Fails if any row is missing the required field 'brief_title'; such rows are dropped (transform.py, upstream of this report).",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "fail>0%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "required_field_missing_overall_status",
+      "description": "Fails if any row is missing the required field 'overall_status'; such rows are dropped (transform.py, upstream of this report).",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "fail>0%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "required_field_missing_conditions",
+      "description": "Fails if any row is missing the required field 'conditions'; such rows are dropped (transform.py, upstream of this report).",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "fail>0%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "referential_integrity_interventions",
+      "description": "Anti-joins interventions.nct_id against studies.nct_id; orphaned rows are dropped.",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 26859,
+      "affected_pct": 0.0,
+      "threshold_note": "pass=0, warn<=0.5%, fail>0.5%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "referential_integrity_locations",
+      "description": "Anti-joins locations.nct_id against studies.nct_id; orphaned rows are dropped.",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 141449,
+      "affected_pct": 0.0,
+      "threshold_note": "pass=0, warn<=0.5%, fail>0.5%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "enrollment_plausibility",
+      "description": "Flags and nulls enrollment_count values outside the plausible range 0 < n <= 100000.",
+      "status": "warn",
+      "scope": "overall",
+      "affected_count": 24,
+      "total_count": 13335,
+      "affected_pct": 0.18,
+      "threshold_note": "pass=0, warn<=2%, fail>2%",
+      "sample_offending_ids": [
+        "NCT05654246",
+        "NCT02012699",
+        "NCT06694181",
+        "NCT06032390",
+        "NCT06934239",
+        "NCT06632886",
+        "NCT03987633",
+        "NCT03335644",
+        "NCT01900821",
+        "NCT03225586",
+        "NCT05668637",
+        "NCT05741112",
+        "NCT07585214",
+        "NCT06934343",
+        "NCT04525716",
+        "NCT06160128",
+        "NCT04471493",
+        "NCT05504057",
+        "NCT05387304",
+        "NCT05285202"
+      ],
+      "per_condition": null
+    },
+    {
+      "name": "phase_enum",
+      "description": "Flags rows whose phases[] contains a value outside the documented ClinicalTrials.gov v2 enum.",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "pass=0, warn<=2%, fail>2%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "date_ordering",
+      "description": "Flags rows where start_date>primary_completion_date or study_first_post_date>last_update_post_date (dates parsed permissively; row is kept either way).",
+      "status": "pass",
+      "scope": "overall",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "pass=0, warn<=1%, fail>1%",
+      "sample_offending_ids": [],
+      "per_condition": null
+    },
+    {
+      "name": "age_parsing",
+      "description": "Flags present-but-unparseable minimumAge/maximumAge strings and nulls them; parses valid ones to years (legitimate 'N/A'/absent values are not flagged).",
+      "status": "warn",
+      "scope": "overall",
+      "affected_count": 40,
+      "total_count": 13335,
+      "affected_pct": 0.3,
+      "threshold_note": "pass=0, warn<=2%, fail>2%",
+      "sample_offending_ids": [
+        "NCT06037421",
+        "NCT06747260",
+        "NCT06993103",
+        "NCT06746532",
+        "NCT05454332",
+        "NCT03253263",
+        "NCT07261787",
+        "NCT05849077",
+        "NCT06074380",
+        "NCT06646250",
+        "NCT05777512",
+        "NCT07098910",
+        "NCT06554522",
+        "NCT06000761",
+        "NCT07350018",
+        "NCT07437391",
+        "NCT03736707",
+        "NCT06822400",
+        "NCT06975189",
+        "NCT06031688"
+      ],
+      "per_condition": null
+    },
+    {
+      "name": "missing_rate_sponsor_class",
+      "description": "Missing-rate check for optional-but-important field 'sponsor_class' (overall + per shortlisted condition).",
+      "status": "pass",
+      "scope": "per_condition",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "pass<=5%, warn<=20%, fail>20%",
+      "sample_offending_ids": [],
+      "per_condition": {
+        "breast": {
+          "affected_count": 0,
+          "total_count": 2663,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "colorectal": {
+          "affected_count": 0,
+          "total_count": 1640,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "leukemia": {
+          "affected_count": 0,
+          "total_count": 1427,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "lung": {
+          "affected_count": 0,
+          "total_count": 4931,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "lymphoma": {
+          "affected_count": 0,
+          "total_count": 1716,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "melanoma": {
+          "affected_count": 0,
+          "total_count": 476,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "pancreatic": {
+          "affected_count": 0,
+          "total_count": 1245,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "prostate": {
+          "affected_count": 0,
+          "total_count": 1327,
+          "affected_pct": 0.0,
+          "status": "pass"
+        }
+      }
+    },
+    {
+      "name": "missing_rate_phases",
+      "description": "Missing-rate check for optional-but-important field 'phases' (overall + per shortlisted condition).",
+      "status": "fail",
+      "scope": "per_condition",
+      "affected_count": 3432,
+      "total_count": 13335,
+      "affected_pct": 25.7368,
+      "threshold_note": "pass<=5%, warn<=20%, fail>20%",
+      "sample_offending_ids": [
+        "NCT07070128",
+        "NCT05059444",
+        "NCT07180693",
+        "NCT06152835",
+        "NCT07327489",
+        "NCT01503190",
+        "NCT06468124",
+        "NCT01793168",
+        "NCT07583485",
+        "NCT06698679",
+        "NCT06413212",
+        "NCT06891651",
+        "NCT07273357",
+        "NCT06966050",
+        "NCT04707443",
+        "NCT05317221",
+        "NCT03562273",
+        "NCT06518382",
+        "NCT07331532",
+        "NCT06107933"
+      ],
+      "per_condition": {
+        "breast": {
+          "affected_count": 650,
+          "total_count": 2663,
+          "affected_pct": 24.4086,
+          "status": "fail"
+        },
+        "colorectal": {
+          "affected_count": 404,
+          "total_count": 1640,
+          "affected_pct": 24.6341,
+          "status": "fail"
+        },
+        "leukemia": {
+          "affected_count": 255,
+          "total_count": 1427,
+          "affected_pct": 17.8697,
+          "status": "warn"
+        },
+        "lung": {
+          "affected_count": 1540,
+          "total_count": 4931,
+          "affected_pct": 31.231,
+          "status": "fail"
+        },
+        "lymphoma": {
+          "affected_count": 290,
+          "total_count": 1716,
+          "affected_pct": 16.8998,
+          "status": "warn"
+        },
+        "melanoma": {
+          "affected_count": 112,
+          "total_count": 476,
+          "affected_pct": 23.5294,
+          "status": "fail"
+        },
+        "pancreatic": {
+          "affected_count": 350,
+          "total_count": 1245,
+          "affected_pct": 28.1124,
+          "status": "fail"
+        },
+        "prostate": {
+          "affected_count": 306,
+          "total_count": 1327,
+          "affected_pct": 23.0595,
+          "status": "fail"
+        }
+      }
+    },
+    {
+      "name": "missing_rate_enrollment_count",
+      "description": "Missing-rate check for optional-but-important field 'enrollment_count' (overall + per shortlisted condition).",
+      "status": "pass",
+      "scope": "per_condition",
+      "affected_count": 26,
+      "total_count": 13335,
+      "affected_pct": 0.195,
+      "threshold_note": "pass<=5%, warn<=20%, fail>20%",
+      "sample_offending_ids": [
+        "NCT05654246",
+        "NCT02012699",
+        "NCT06694181",
+        "NCT06032390",
+        "NCT06934239",
+        "NCT06632886",
+        "NCT03987633",
+        "NCT03335644",
+        "NCT01900821",
+        "NCT03225586",
+        "NCT05668637",
+        "NCT05741112",
+        "NCT07585214",
+        "NCT00471978",
+        "NCT06934343",
+        "NCT04525716",
+        "NCT06160128",
+        "NCT04471493",
+        "NCT05504057",
+        "NCT05387304"
+      ],
+      "per_condition": {
+        "breast": {
+          "affected_count": 9,
+          "total_count": 2663,
+          "affected_pct": 0.338,
+          "status": "pass"
+        },
+        "colorectal": {
+          "affected_count": 4,
+          "total_count": 1640,
+          "affected_pct": 0.2439,
+          "status": "pass"
+        },
+        "leukemia": {
+          "affected_count": 2,
+          "total_count": 1427,
+          "affected_pct": 0.1402,
+          "status": "pass"
+        },
+        "lung": {
+          "affected_count": 16,
+          "total_count": 4931,
+          "affected_pct": 0.3245,
+          "status": "pass"
+        },
+        "lymphoma": {
+          "affected_count": 1,
+          "total_count": 1716,
+          "affected_pct": 0.0583,
+          "status": "pass"
+        },
+        "melanoma": {
+          "affected_count": 1,
+          "total_count": 476,
+          "affected_pct": 0.2101,
+          "status": "pass"
+        },
+        "pancreatic": {
+          "affected_count": 3,
+          "total_count": 1245,
+          "affected_pct": 0.241,
+          "status": "pass"
+        },
+        "prostate": {
+          "affected_count": 2,
+          "total_count": 1327,
+          "affected_pct": 0.1507,
+          "status": "pass"
+        }
+      }
+    },
+    {
+      "name": "missing_rate_eligibility_criteria",
+      "description": "Missing-rate check for optional-but-important field 'eligibility_criteria' (overall + per shortlisted condition).",
+      "status": "pass",
+      "scope": "per_condition",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "pass<=5%, warn<=20%, fail>20%",
+      "sample_offending_ids": [],
+      "per_condition": {
+        "breast": {
+          "affected_count": 0,
+          "total_count": 2663,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "colorectal": {
+          "affected_count": 0,
+          "total_count": 1640,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "leukemia": {
+          "affected_count": 0,
+          "total_count": 1427,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "lung": {
+          "affected_count": 0,
+          "total_count": 4931,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "lymphoma": {
+          "affected_count": 0,
+          "total_count": 1716,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "melanoma": {
+          "affected_count": 0,
+          "total_count": 476,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "pancreatic": {
+          "affected_count": 0,
+          "total_count": 1245,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "prostate": {
+          "affected_count": 0,
+          "total_count": 1327,
+          "affected_pct": 0.0,
+          "status": "pass"
+        }
+      }
+    },
+    {
+      "name": "missing_rate_sex",
+      "description": "Missing-rate check for optional-but-important field 'sex' (overall + per shortlisted condition).",
+      "status": "pass",
+      "scope": "per_condition",
+      "affected_count": 0,
+      "total_count": 13335,
+      "affected_pct": 0.0,
+      "threshold_note": "pass<=5%, warn<=20%, fail>20%",
+      "sample_offending_ids": [],
+      "per_condition": {
+        "breast": {
+          "affected_count": 0,
+          "total_count": 2663,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "colorectal": {
+          "affected_count": 0,
+          "total_count": 1640,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "leukemia": {
+          "affected_count": 0,
+          "total_count": 1427,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "lung": {
+          "affected_count": 0,
+          "total_count": 4931,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "lymphoma": {
+          "affected_count": 0,
+          "total_count": 1716,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "melanoma": {
+          "affected_count": 0,
+          "total_count": 476,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "pancreatic": {
+          "affected_count": 0,
+          "total_count": 1245,
+          "affected_pct": 0.0,
+          "status": "pass"
+        },
+        "prostate": {
+          "affected_count": 0,
+          "total_count": 1327,
+          "affected_pct": 0.0,
+          "status": "pass"
+        }
+      }
+    }
+  ]
+}
