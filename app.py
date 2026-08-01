@@ -481,12 +481,13 @@ def main() -> None:
     vectorizer, matrix = load_matching_artifacts(str(PROCESSED_DIR), fingerprint)
     quality_report = load_quality_report(str(PROCESSED_DIR), fingerprint)
 
-    st.title("Oncology Trial Match")
+    st.title("🎗️ Oncology Trial Match")
     st.caption("A clinical-trial matching and recommendation tool over ClinicalTrials.gov data.")
-    st.caption(
+    st.info(
         "New here? The \"About / How to read this\" tab has a plain-language guide "
         "and glossary."
     )
+    st.divider()
 
     tab_match, tab_landscape, tab_health, tab_about = st.tabs(
         ["Patient Match", "Trial Landscape", "Pipeline Health", "About / How to read this"]
